@@ -12,7 +12,11 @@
 ---
 
 ##  Sobre o Projeto
-Este aplicativo foi desenvolvido em ambiente Android Studio com o objetivo de automatizar, gerenciar e validar a presença dos alunos durante as palestras e atividades da **Semana Acadêmica de ADS**. 
+Este projeto foi desenvolvido em ambiente Android Studio com o objetivo de automatizar, gerenciar e validar a presença dos alunos durante as palestras e atividades da **Semana Acadêmica de ADS**.
+
+O sistema foi concebido de forma interdisciplinar, unindo os conceitos e práticas das disciplinas de:
+* **Programação para Aplicações e Dispositivos Móveis**
+* **Métodos Ágeis de Desenvolvimento de Software**
 
 ###  Tecnologias Utilizadas
 * **IDE:** Android Studio
