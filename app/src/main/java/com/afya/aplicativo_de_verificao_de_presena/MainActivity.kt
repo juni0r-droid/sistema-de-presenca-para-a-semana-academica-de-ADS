@@ -25,13 +25,66 @@ class MainActivity : ComponentActivity() {
 fun AfyaEventosApp() {
     var usuarioLogado by rememberSaveable { mutableStateOf<DadosUsuario?>(null) }
     var mostrarCadastro by rememberSaveable { mutableStateOf(false) }
+    var abaSelecionada by rememberSaveable { mutableStateOf("inicio") }
+
+    // Estado compartilhado de eventos
+    var eventosDisponiveis by remember {
+        mutableStateOf(
+            listOf(
+                Evento("Congresso de Medicina 2026", "Centro de Convenções", "10/10/2026", "Um mergulho nas novas tecnologias médicas e práticas clínicas modernas."),
+                Evento("Workshop de Programação Kotlin", "Laboratório 04", "15/10/2026", "Aprenda as melhores práticas de desenvolvimento Android com especialistas."),
+                Evento("Palestra: Carreira na Saúde", "Auditório B", "20/10/2026", "Insights valiosos sobre o mercado de trabalho e gestão de carreira.")
+            )
+        )
+    }
+
+    var eventosInscritos by remember {
+        mutableStateOf(
+            listOf(
+                Evento("Jornada Acadêmica 2026", "Auditório Central", "Hoje", "Evento de abertura do semestre acadêmico.")
+            )
+        )
+    }
 
     if (usuarioLogado != null) {
-        TelaPrincipal(
-            nomeUsuario = usuarioLogado?.nome ?: "",
-            tipoUsuario = usuarioLogado?.tipo ?: TipoUsuario.ALUNO,
-            aoSair = { usuarioLogado = null }
-        )
+        when (abaSelecionada) {
+            "inicio" -> {
+                TelaPrincipal(
+                    nomeUsuario = usuarioLogado?.nome ?: "",
+                    tipoUsuario = usuarioLogado?.tipo ?: TipoUsuario.ALUNO,
+                    eventosInscritos = eventosInscritos,
+                    aoSair = { usuarioLogado = null },
+                    aoTrocarAba = { abaSelecionada = it },
+                    aoCancelarInscricao = { evento ->
+                        eventosInscritos = eventosInscritos - evento
+                        eventosDisponiveis = eventosDisponiveis + evento
+                    }
+                )
+            }
+            "eventos" -> {
+                TelaNovosEventos(
+                    eventosDisponiveis = eventosDisponiveis,
+                    aoInscrever = { evento ->
+                        eventosInscritos = eventosInscritos + evento
+                        eventosDisponiveis = eventosDisponiveis.filter { it != evento }
+                    },
+                    aoTrocarAba = { abaSelecionada = it }
+                )
+            }
+            else -> {
+                TelaPrincipal(
+                    nomeUsuario = usuarioLogado?.nome ?: "",
+                    tipoUsuario = usuarioLogado?.tipo ?: TipoUsuario.ALUNO,
+                    eventosInscritos = eventosInscritos,
+                    aoSair = { usuarioLogado = null },
+                    aoTrocarAba = { abaSelecionada = it },
+                    aoCancelarInscricao = { evento ->
+                        eventosInscritos = eventosInscritos - evento
+                        eventosDisponiveis = eventosDisponiveis + evento
+                    }
+                )
+            }
+        }
     } else if (mostrarCadastro) {
         RotaCadastro(
             aoCadastrar = { tipo, nome ->

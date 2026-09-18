@@ -24,7 +24,10 @@ import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerifica
 fun TelaPrincipal(
     nomeUsuario: String,
     tipoUsuario: TipoUsuario,
-    aoSair: () -> Unit
+    eventosInscritos: List<Evento>,
+    aoSair: () -> Unit,
+    aoTrocarAba: (String) -> Unit,
+    aoCancelarInscricao: (Evento) -> Unit
 ) {
     val primeiroNome = nomeUsuario.split(" ").firstOrNull() ?: ""
     val saudacao = if (tipoUsuario == TipoUsuario.COORDENADOR) {
@@ -34,6 +37,8 @@ fun TelaPrincipal(
     }
     
     var aviso by remember { mutableStateOf("Selecione um evento para iniciar a validação.") }
+    var eventoSelecionadoParaDetalhes by remember { mutableStateOf<Evento?>(null) }
+
     Scaffold(containerColor = Color.White) { paddingValues ->
         Column(
             Modifier
@@ -82,21 +87,34 @@ fun TelaPrincipal(
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
-                Text("Eventos de hoje", fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Seus Eventos",
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
                 Spacer(Modifier.height(15.dp))
-                CartaoEvento(
-                    tipo = "EM ANDAMENTO",
-                    titulo = "Jornada Acadêmica 2026",
-                    detalhe = "Auditório Central · 09:00 às 17:00",
-                    acao = "Validar presença"
-                ) { aviso = "Validação de presença iniciada para Jornada Acadêmica 2026." }
-                Spacer(Modifier.height(13.dp))
-                CartaoEvento(
-                    tipo = "PRÓXIMO EVENTO",
-                    titulo = "Recepção de novos alunos",
-                    detalhe = "Campus Sul · 14:00 às 16:00",
-                    acao = "Ver evento"
-                ) { aviso = "Detalhes do evento selecionado." }
+
+                if (eventosInscritos.isEmpty()) {
+                    Text(
+                        "Você ainda não possui eventos vinculados.",
+                        color = Color.Gray,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(vertical = 10.dp)
+                    )
+                } else {
+                    eventosInscritos.forEach { evento ->
+                        CartaoEvento(
+                            tipo = if (tipoUsuario == TipoUsuario.COORDENADOR) "GERENCIANDO" else "INSCRITO",
+                            titulo = evento.titulo,
+                            detalhe = "${evento.local} · ${evento.data}",
+                            acao = if (tipoUsuario == TipoUsuario.COORDENADOR) "Gerenciar" else "Mais detalhes"
+                        ) {
+                            eventoSelecionadoParaDetalhes = evento
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+
                 Text(
                     aviso,
                     color = Color(0xFF666666),
@@ -113,11 +131,88 @@ fun TelaPrincipal(
                     .padding(vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                Text("Início", color = AfyaMagenta, fontWeight = FontWeight.Bold)
-                Text("Eventos", color = Color(0xFF5A5A5A))
-                Text("Perfil", color = Color(0xFF5A5A5A))
+                Text(
+                    "Início", 
+                    color = AfyaMagenta, 
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { aoTrocarAba("inicio") }
+                )
+                Text(
+                    "Eventos", 
+                    color = Color(0xFF5A5A5A),
+                    modifier = Modifier.clickable { aoTrocarAba("eventos") }
+                )
+                Text(
+                    "Perfil", 
+                    color = Color(0xFF5A5A5A),
+                    modifier = Modifier.clickable { aoTrocarAba("perfil") }
+                )
             }
         }
+    }
+
+    // Modal de Detalhes com Opções de Cancelar e Validar
+    if (eventoSelecionadoParaDetalhes != null) {
+        val evento = eventoSelecionadoParaDetalhes!!
+        val eHoraDoEvento = evento.data == "Hoje"
+
+        AlertDialog(
+            onDismissRequest = { eventoSelecionadoParaDetalhes = null },
+            confirmButton = {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            aviso = "Presença validada com sucesso!"
+                            eventoSelecionadoParaDetalhes = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = eHoraDoEvento,
+                        colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
+                    ) {
+                        Text("Validar presença")
+                    }
+                    
+                    OutlinedButton(
+                        onClick = {
+                            aoCancelarInscricao(evento)
+                            eventoSelecionadoParaDetalhes = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red)
+                    ) {
+                        Text("Cancelar inscrição")
+                    }
+
+                    TextButton(
+                        onClick = { eventoSelecionadoParaDetalhes = null },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Fechar", color = Color.Gray)
+                    }
+                }
+            },
+            dismissButton = null,
+            title = { Text(evento.titulo, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Local: ${evento.local}", fontWeight = FontWeight.Medium)
+                    Text("Data: ${evento.data}", fontWeight = FontWeight.Medium)
+                    if (!eHoraDoEvento) {
+                        Text(
+                            "A validação ficará disponível apenas no dia do evento.",
+                            color = AfyaMagenta,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(evento.descricao)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
 
@@ -158,7 +253,12 @@ fun PreviewTelaPrincipal() {
         TelaPrincipal(
             nomeUsuario = "Coordenador Afya",
             tipoUsuario = TipoUsuario.COORDENADOR,
-            aoSair = {}
+            eventosInscritos = listOf(
+                Evento("Jornada Acadêmica 2026", "Auditório Central", "Hoje", "Descrição")
+            ),
+            aoSair = {},
+            aoTrocarAba = {},
+            aoCancelarInscricao = {}
         )
     }
 }
