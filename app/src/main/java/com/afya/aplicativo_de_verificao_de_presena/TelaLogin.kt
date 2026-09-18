@@ -23,7 +23,7 @@ import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
 
 @Composable
-fun RotaLogin(aoLogar: () -> Unit) {
+fun RotaLogin(aoLogar: (TipoUsuario, String) -> Unit, aoIrParaCadastro: () -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var senha by rememberSaveable { mutableStateOf("") }
     var senhaVisivel by rememberSaveable { mutableStateOf(false) }
@@ -43,9 +43,18 @@ fun RotaLogin(aoLogar: () -> Unit) {
                 mensagem = "Preencha e-mail e senha para entrar."
             } else {
                 mensagem = ""
-                aoLogar()
+                // Simulação de login
+                if (email == "coordenador@afya.edu.br" && senha == "123456") {
+                    aoLogar(TipoUsuario.COORDENADOR, "Afya")
+                } else {
+                    // Para fins de demonstração, qualquer outro login entra como aluno
+                    // Pegamos a parte antes do @ como nome
+                    val nomeExtraido = email.substringBefore("@").replaceFirstChar { it.uppercase() }
+                    aoLogar(TipoUsuario.ALUNO, nomeExtraido)
+                }
             }
-        }
+        },
+        aoIrParaCadastro = aoIrParaCadastro
     )
 }
 
@@ -60,7 +69,8 @@ fun TelaLogin(
     aoMudarSenha: (String) -> Unit,
     aoMudarVisibilidadeSenha: () -> Unit,
     aoRecuperarSenha: () -> Unit,
-    aoFazerLogin: () -> Unit
+    aoFazerLogin: () -> Unit,
+    aoIrParaCadastro: () -> Unit
 ) {
     Scaffold(containerColor = Color.White) { paddingValues ->
         Column(
@@ -146,6 +156,21 @@ fun TelaLogin(
                     )
                 }
                 Spacer(Modifier.height(20.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Não tem uma conta? ", color = Color(0xFF555555), fontSize = 14.sp)
+                    Text(
+                        "Crie uma aqui",
+                        color = AfyaMagenta,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable(onClick = aoIrParaCadastro)
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE4F0)),
                     shape = RoundedCornerShape(14.dp)
@@ -174,6 +199,6 @@ fun TelaLogin(
 @Composable
 fun PreviewTelaLogin() {
     AplicativodeVerificação_de_PresençaTheme {
-        RotaLogin(aoLogar = {})
+        RotaLogin(aoLogar = { _, _ -> }, aoIrParaCadastro = {})
     }
 }

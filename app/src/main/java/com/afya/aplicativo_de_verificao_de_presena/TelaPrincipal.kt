@@ -21,7 +21,18 @@ import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
 
 @Composable
-fun TelaPrincipal(aoSair: () -> Unit) {
+fun TelaPrincipal(
+    nomeUsuario: String,
+    tipoUsuario: TipoUsuario,
+    aoSair: () -> Unit
+) {
+    val primeiroNome = nomeUsuario.split(" ").firstOrNull() ?: ""
+    val saudacao = if (tipoUsuario == TipoUsuario.COORDENADOR) {
+        "Olá, Coordenador(a) $primeiroNome"
+    } else {
+        "Olá, $primeiroNome"
+    }
+    
     var aviso by remember { mutableStateOf("Selecione um evento para iniciar a validação.") }
     Scaffold(containerColor = Color.White) { paddingValues ->
         Column(
@@ -58,7 +69,7 @@ fun TelaPrincipal(aoSair: () -> Unit) {
                 }
                 Spacer(Modifier.height(29.dp))
                 Text(
-                    "Olá, Coordenador(a)",
+                    saudacao,
                     color = Color.White,
                     fontSize = 27.sp,
                     fontWeight = FontWeight.SemiBold
@@ -144,6 +155,10 @@ fun CartaoEvento(tipo: String, titulo: String, detalhe: String, acao: String, ao
 @Composable
 fun PreviewTelaPrincipal() {
     AplicativodeVerificação_de_PresençaTheme {
-        TelaPrincipal(aoSair = {})
+        TelaPrincipal(
+            nomeUsuario = "Coordenador Afya",
+            tipoUsuario = TipoUsuario.COORDENADOR,
+            aoSair = {}
+        )
     }
 }

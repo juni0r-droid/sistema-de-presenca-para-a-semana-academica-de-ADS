@@ -23,13 +23,37 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AfyaEventosApp() {
-    var autenticado by rememberSaveable { mutableStateOf(false) }
-    if (autenticado) {
-        TelaPrincipal(aoSair = { autenticado = false })
+    var usuarioLogado by rememberSaveable { mutableStateOf<DadosUsuario?>(null) }
+    var mostrarCadastro by rememberSaveable { mutableStateOf(false) }
+
+    if (usuarioLogado != null) {
+        TelaPrincipal(
+            nomeUsuario = usuarioLogado?.nome ?: "",
+            tipoUsuario = usuarioLogado?.tipo ?: TipoUsuario.ALUNO,
+            aoSair = { usuarioLogado = null }
+        )
+    } else if (mostrarCadastro) {
+        RotaCadastro(
+            aoCadastrar = { tipo, nome ->
+                mostrarCadastro = false
+                usuarioLogado = DadosUsuario(nome, tipo)
+            },
+            aoVoltar = { mostrarCadastro = false }
+        )
     } else {
-        RotaLogin(aoLogar = { autenticado = true })
+        RotaLogin(
+            aoLogar = { tipo, nome ->
+                usuarioLogado = DadosUsuario(nome, tipo)
+            },
+            aoIrParaCadastro = { mostrarCadastro = true }
+        )
     }
 }
+
+data class DadosUsuario(
+    val nome: String,
+    val tipo: TipoUsuario
+) : java.io.Serializable
 
 @Preview(showBackground = true)
 @Composable
