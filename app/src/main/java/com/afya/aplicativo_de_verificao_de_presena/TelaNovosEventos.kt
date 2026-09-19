@@ -1,5 +1,6 @@
 package com.afya.aplicativo_de_verificao_de_presena
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,8 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -19,9 +22,12 @@ import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerifica
 
 @Composable
 fun TelaNovosEventos(
+    tipoUsuario: TipoUsuario = TipoUsuario.ALUNO,
     eventosDisponiveis: List<Evento>,
     aoInscrever: (Evento) -> Unit,
-    aoTrocarAba: (String) -> Unit
+    aoTrocarAba: (String) -> Unit,
+    aoEditarEvento: (Evento) -> Unit = {},
+    aoExcluirEvento: (Evento) -> Unit = {}
 ) {
     var eventoSelecionadoParaDetalhes by remember { mutableStateOf<Evento?>(null) }
     var mensagemSucesso by remember { mutableStateOf("") }
@@ -67,17 +73,32 @@ fun TelaNovosEventos(
                     .background(AfyaMagenta)
                     .padding(24.dp)
             ) {
-                Text(
-                    "Novos Eventos",
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Descubra o que está acontecendo na Afya.",
-                    color = Color.White,
-                    fontSize = 14.sp
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.afya_logo_white),
+                        contentDescription = "Logo Afya",
+                        modifier = Modifier
+                            .size(70.dp, 35.dp)
+                            .padding(end = 16.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (tipoUsuario == TipoUsuario.COORDENADOR) "Gestão de Eventos" else "Novos Eventos",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (tipoUsuario == TipoUsuario.COORDENADOR) "Gerencie todos os eventos." else "Descubra o que está acontecendo.",
+                            color = Color.White,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
 
             Column(
@@ -101,7 +122,11 @@ fun TelaNovosEventos(
                     }
                 }
 
-                Text("Disponíveis para inscrição", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (tipoUsuario == TipoUsuario.COORDENADOR) "Todos os eventos" else "Disponíveis para inscrição", 
+                    fontSize = 18.sp, 
+                    fontWeight = FontWeight.SemiBold
+                )
                 Spacer(Modifier.height(15.dp))
 
                 if (eventosDisponiveis.isEmpty()) {
@@ -135,16 +160,41 @@ fun TelaNovosEventos(
             onDismissRequest = { eventoSelecionadoParaDetalhes = null },
             confirmButton = {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            aoInscrever(evento)
-                            mensagemSucesso = "Inscrição realizada com sucesso em: ${evento.titulo}"
-                            eventoSelecionadoParaDetalhes = null
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
-                    ) {
-                        Text("Inscrever-se")
+                    if (tipoUsuario == TipoUsuario.COORDENADOR) {
+                        Button(
+                            onClick = {
+                                aoEditarEvento(evento)
+                                eventoSelecionadoParaDetalhes = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
+                        ) {
+                            Text("Editar Evento")
+                        }
+                        
+                        OutlinedButton(
+                            onClick = {
+                                aoExcluirEvento(evento)
+                                eventoSelecionadoParaDetalhes = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red)
+                        ) {
+                            Text("Excluir Evento")
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                aoInscrever(evento)
+                                mensagemSucesso = "Inscrição realizada com sucesso em: ${evento.titulo}"
+                                eventoSelecionadoParaDetalhes = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
+                        ) {
+                            Text("Inscrever-se")
+                        }
                     }
                     
                     TextButton(
@@ -171,20 +221,13 @@ fun TelaNovosEventos(
     }
 }
 
-data class Evento(
-    val titulo: String,
-    val local: String,
-    val data: String,
-    val descricao: String
-)
-
 @Preview(showBackground = true)
 @Composable
 fun PreviewTelaNovosEventos() {
     AplicativodeVerificação_de_PresençaTheme {
         TelaNovosEventos(
             eventosDisponiveis = listOf(
-                Evento("Evento de Teste", "Local", "Data", "Descrição")
+                Evento(titulo = "Evento de Teste", local = "Local", data = "Data", descricao = "Descrição")
             ),
             aoInscrever = {},
             aoTrocarAba = {}

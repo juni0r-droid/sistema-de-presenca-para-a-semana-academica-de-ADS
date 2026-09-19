@@ -27,7 +27,11 @@ fun TelaPrincipal(
     eventosInscritos: List<Evento>,
     aoSair: () -> Unit,
     aoTrocarAba: (String) -> Unit,
-    aoCancelarInscricao: (Evento) -> Unit
+    aoCancelarInscricao: (Evento) -> Unit,
+    aoIniciarValidacao: (Evento) -> Unit,
+    aoCriarEvento: () -> Unit = {},
+    aoEditarEvento: (Evento) -> Unit = {},
+    aoExcluirEvento: (Evento) -> Unit = {}
 ) {
     val primeiroNome = nomeUsuario.split(" ").firstOrNull() ?: ""
     val saudacao = if (tipoUsuario == TipoUsuario.COORDENADOR) {
@@ -64,13 +68,6 @@ fun TelaPrincipal(
                             .width(130.dp)
                             .height(52.dp)
                     )
-                    Text(
-                        "Sair",
-                        color = Color.White,
-                        modifier = Modifier
-                            .clickable { aoSair() }
-                            .padding(8.dp)
-                    )
                 }
                 Spacer(Modifier.height(29.dp))
                 Text(
@@ -88,10 +85,22 @@ fun TelaPrincipal(
                     .padding(24.dp)
             ) {
                 Text(
-                    "Seus Eventos",
+                    if (tipoUsuario == TipoUsuario.COORDENADOR) "Eventos Recentes" else "Seus Eventos",
                     fontSize = 19.sp,
                     fontWeight = FontWeight.SemiBold
                 )
+                
+                if (tipoUsuario == TipoUsuario.COORDENADOR) {
+                    Button(
+                        onClick = aoCriarEvento,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Criar Novo Evento", fontWeight = FontWeight.Bold)
+                    }
+                }
+                
                 Spacer(Modifier.height(15.dp))
 
                 if (eventosInscritos.isEmpty()) {
@@ -104,10 +113,10 @@ fun TelaPrincipal(
                 } else {
                     eventosInscritos.forEach { evento ->
                         CartaoEvento(
-                            tipo = if (tipoUsuario == TipoUsuario.COORDENADOR) "GERENCIANDO" else "INSCRITO",
+                            tipo = if (evento.validado) "VALIDADO" else if (tipoUsuario == TipoUsuario.COORDENADOR) "GERENCIANDO" else "INSCRITO",
                             titulo = evento.titulo,
                             detalhe = "${evento.local} · ${evento.data}",
-                            acao = if (tipoUsuario == TipoUsuario.COORDENADOR) "Gerenciar" else "Mais detalhes"
+                            acao = if (evento.validado) "Ver comprovante" else if (tipoUsuario == TipoUsuario.COORDENADOR) "Gerenciar" else "Mais detalhes"
                         ) {
                             eventoSelecionadoParaDetalhes = evento
                         }
@@ -160,28 +169,65 @@ fun TelaPrincipal(
             onDismissRequest = { eventoSelecionadoParaDetalhes = null },
             confirmButton = {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            aviso = "Presença validada com sucesso!"
-                            eventoSelecionadoParaDetalhes = null
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = eHoraDoEvento,
-                        colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
-                    ) {
-                        Text("Validar presença")
-                    }
-                    
-                    OutlinedButton(
-                        onClick = {
-                            aoCancelarInscricao(evento)
-                            eventoSelecionadoParaDetalhes = null
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red)
-                    ) {
-                        Text("Cancelar inscrição")
+                    if (tipoUsuario == TipoUsuario.COORDENADOR) {
+                        Button(
+                            onClick = {
+                                aoEditarEvento(evento)
+                                eventoSelecionadoParaDetalhes = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
+                        ) {
+                            Text("Editar Evento")
+                        }
+                        
+                        OutlinedButton(
+                            onClick = {
+                                aoExcluirEvento(evento)
+                                eventoSelecionadoParaDetalhes = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red)
+                        ) {
+                            Text("Excluir Evento")
+                        }
+                    } else {
+                        if (!evento.validado) {
+                            Button(
+                                onClick = {
+                                    aoIniciarValidacao(evento)
+                                    eventoSelecionadoParaDetalhes = null
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = eHoraDoEvento,
+                                colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
+                            ) {
+                                Text("Validar presença")
+                            }
+                        } else {
+                            Button(
+                                onClick = { /* Ação para ver comprovante */ },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                            ) {
+                                Text("Ver comprovante")
+                            }
+                        }
+                        
+                        if (!evento.validado) {
+                            OutlinedButton(
+                                onClick = {
+                                    aoCancelarInscricao(evento)
+                                    eventoSelecionadoParaDetalhes = null
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red)
+                            ) {
+                                Text("Cancelar inscrição")
+                            }
+                        }
                     }
 
                     TextButton(
@@ -254,11 +300,12 @@ fun PreviewTelaPrincipal() {
             nomeUsuario = "Coordenador Afya",
             tipoUsuario = TipoUsuario.COORDENADOR,
             eventosInscritos = listOf(
-                Evento("Jornada Acadêmica 2026", "Auditório Central", "Hoje", "Descrição")
+                Evento(titulo = "Jornada Acadêmica 2026", local = "Auditório Central", data = "Hoje", descricao = "Descrição")
             ),
             aoSair = {},
             aoTrocarAba = {},
-            aoCancelarInscricao = {}
+            aoCancelarInscricao = {},
+            aoIniciarValidacao = {}
         )
     }
 }

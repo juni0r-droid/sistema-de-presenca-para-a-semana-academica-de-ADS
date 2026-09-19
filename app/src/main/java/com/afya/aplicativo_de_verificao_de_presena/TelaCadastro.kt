@@ -24,10 +24,8 @@ import androidx.compose.ui.unit.sp
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
 
-enum class TipoUsuario { ALUNO, COORDENADOR }
-
 @Composable
-fun RotaCadastro(aoCadastrar: (TipoUsuario, String) -> Unit, aoVoltar: () -> Unit) {
+fun RotaCadastro(aoCadastrar: (DadosUsuario) -> Unit, aoVoltar: () -> Unit) {
     var tipoSelecionado by rememberSaveable { mutableStateOf(TipoUsuario.ALUNO) }
     var nome by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -72,7 +70,15 @@ fun RotaCadastro(aoCadastrar: (TipoUsuario, String) -> Unit, aoVoltar: () -> Uni
                 }
             } else {
                 mensagem = ""
-                aoCadastrar(tipoSelecionado, nome)
+                aoCadastrar(
+                    DadosUsuario(
+                        nome = nome,
+                        email = email,
+                        tipo = tipoSelecionado,
+                        registro = if (tipoSelecionado == TipoUsuario.ALUNO) registro else null,
+                        cpf = if (tipoSelecionado == TipoUsuario.COORDENADOR) cpf else null
+                    )
+                )
             }
         },
         aoVoltar = aoVoltar
@@ -269,6 +275,6 @@ fun TelaCadastro(
 @Composable
 fun PreviewTelaCadastro() {
     AplicativodeVerificação_de_PresençaTheme {
-        RotaCadastro(aoCadastrar = { _, _ -> }, aoVoltar = {})
+        RotaCadastro(aoCadastrar = { }, aoVoltar = {})
     }
 }

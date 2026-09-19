@@ -23,7 +23,7 @@ import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
 
 @Composable
-fun RotaLogin(aoLogar: (TipoUsuario, String) -> Unit, aoIrParaCadastro: () -> Unit) {
+fun RotaLogin(aoLogar: (DadosUsuario) -> Unit, aoIrParaCadastro: () -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var senha by rememberSaveable { mutableStateOf("") }
     var senhaVisivel by rememberSaveable { mutableStateOf(false) }
@@ -45,12 +45,10 @@ fun RotaLogin(aoLogar: (TipoUsuario, String) -> Unit, aoIrParaCadastro: () -> Un
                 mensagem = ""
                 // Simulação de login
                 if (email == "coordenador@afya.edu.br" && senha == "123456") {
-                    aoLogar(TipoUsuario.COORDENADOR, "Afya")
+                    aoLogar(DadosUsuario(nome = "Coordenador Afya", email = email, tipo = TipoUsuario.COORDENADOR, cpf = "123.456.789-00"))
                 } else {
-                    // Para fins de demonstração, qualquer outro login entra como aluno
-                    // Pegamos a parte antes do @ como nome
                     val nomeExtraido = email.substringBefore("@").replaceFirstChar { it.uppercase() }
-                    aoLogar(TipoUsuario.ALUNO, nomeExtraido)
+                    aoLogar(DadosUsuario(nome = nomeExtraido, email = email, tipo = TipoUsuario.ALUNO, registro = "20260001"))
                 }
             }
         },
@@ -199,6 +197,6 @@ fun TelaLogin(
 @Composable
 fun PreviewTelaLogin() {
     AplicativodeVerificação_de_PresençaTheme {
-        RotaLogin(aoLogar = { _, _ -> }, aoIrParaCadastro = {})
+        RotaLogin(aoLogar = { }, aoIrParaCadastro = {})
     }
 }
