@@ -30,51 +30,23 @@ fun AfyaEventosApp() {
     var usuarioLogado by rememberSaveable { mutableStateOf<DadosUsuario?>(null) }
     var mostrarCadastro by rememberSaveable { mutableStateOf(false) }
     var abaSelecionada by rememberSaveable { mutableStateOf("inicio") }
-    
-    // Estados de validação
+
+    // Estados de validação e edição
     var eventoSendoValidado by remember { mutableStateOf<Evento?>(null) }
     var eventoSendoEditado by remember { mutableStateOf<Evento?>(null) }
     var mostrarPopupSucesso by remember { mutableStateOf(false) }
     var mostrarPopupErro by remember { mutableStateOf(false) }
 
-    // Estado compartilhado de eventos
-    var eventosDisponiveis by remember {
-        mutableStateOf(
-            listOf(
-                Evento(titulo = "Congresso de Medicina 2026", local = "Centro de Convenções", data = "10/10/2026", descricao = "Um mergulho nas novas tecnologias médicas e práticas clínicas modernas."),
-                Evento(titulo = "Workshop de Programação Kotlin", local = "Laboratório 04", data = "15/10/2026", descricao = "Aprenda as melhores práticas de desenvolvimento Android com especialistas."),
-                Evento(titulo = "Palestra: Carreira na Saúde", local = "Auditório B", data = "20/10/2026", descricao = "Insights valiosos sobre o mercado de trabalho e gestão de carreira.")
-            )
-        )
-    }
-
-    var eventosInscritos by remember {
-        mutableStateOf(
-            listOf(
-                Evento(titulo = "Jornada Acadêmica 2026", local = "Auditório Central", data = "Hoje", descricao = "Evento de abertura do semestre acadêmico.")
-            )
-        )
-    }
-
     if (usuarioLogado != null) {
         val dados = usuarioLogado!!
         when (abaSelecionada) {
             "inicio" -> {
-                val listaParaExibir = if (dados.tipo == TipoUsuario.COORDENADOR) {
-                    eventosDisponiveis.takeLast(5).reversed()
-                } else {
-                    eventosInscritos
-                }
-                
-                TelaPrincipal(
-                    nomeUsuario = dados.nome,
-                    tipoUsuario = dados.tipo,
-                    eventosInscritos = listaParaExibir,
+                RotaPrincipal(
+                    usuario = dados,
                     aoSair = { usuarioLogado = null },
                     aoTrocarAba = { abaSelecionada = it },
                     aoCancelarInscricao = { evento ->
-                        eventosInscritos = eventosInscritos - evento
-                        eventosDisponiveis = eventosDisponiveis + evento
+                        // Lógica de cancelamento visual ou chamada à API
                     },
                     aoIniciarValidacao = { evento ->
                         eventoSendoValidado = evento
@@ -89,43 +61,28 @@ fun AfyaEventosApp() {
                         abaSelecionada = "criar_evento"
                     },
                     aoExcluirEvento = { evento ->
-                        eventosDisponiveis = eventosDisponiveis.filter { it.id != evento.id }
-                        eventosInscritos = eventosInscritos.filter { it.id != evento.id }
+                        // Lógica para excluir o evento
                     }
                 )
             }
             "criar_evento" -> {
-                TelaCriarEvento(
+                RotaCriarEvento(
                     eventoParaEditar = eventoSendoEditado,
                     aoCriar = { novoEvento ->
-                        if (eventoSendoEditado != null) {
-                            // Atualiza evento existente
-                            eventosDisponiveis = eventosDisponiveis.map {
-                                if (it.id == novoEvento.id) novoEvento else it
-                            }
-                            eventosInscritos = eventosInscritos.map {
-                                if (it.id == novoEvento.id) novoEvento else it
-                            }
-                        } else {
-                            // Adiciona novo
-                            eventosDisponiveis = eventosDisponiveis + novoEvento
-                        }
                         abaSelecionada = "inicio"
                         eventoSendoEditado = null
                     },
-                    aoVoltar = { 
+                    aoVoltar = {
                         abaSelecionada = "inicio"
                         eventoSendoEditado = null
                     }
                 )
             }
             "eventos" -> {
-                TelaNovosEventos(
-                    tipoUsuario = dados.tipo,
-                    eventosDisponiveis = if (dados.tipo == TipoUsuario.COORDENADOR) eventosDisponiveis + eventosInscritos else eventosDisponiveis,
+                RotaNovosEventos(
+                    usuario = dados,
                     aoInscrever = { evento ->
-                        eventosInscritos = eventosInscritos + evento
-                        eventosDisponiveis = eventosDisponiveis.filter { it.id != evento.id }
+                        // Ação ao inscrever no evento
                     },
                     aoTrocarAba = { abaSelecionada = it },
                     aoEditarEvento = { evento ->
@@ -133,8 +90,7 @@ fun AfyaEventosApp() {
                         abaSelecionada = "criar_evento"
                     },
                     aoExcluirEvento = { evento ->
-                        eventosDisponiveis = eventosDisponiveis.filter { it.id != evento.id }
-                        eventosInscritos = eventosInscritos.filter { it.id != evento.id }
+                        // Ação ao excluir evento
                     }
                 )
             }
@@ -146,13 +102,11 @@ fun AfyaEventosApp() {
                 )
             }
             "leitor_qr" -> {
-                TelaLeitorQR(
+                RotaLeitorQR(
+                    usuario = dados,
+                    eventoId = eventoSendoValidado?.id ?: "",
+                    chaveAcessoEvento = eventoSendoValidado?.chaveAcesso ?: "",
                     aoValidarSucesso = {
-                        eventoSendoValidado?.let { evento ->
-                            eventosInscritos = eventosInscritos.map {
-                                if (it == evento) it.copy(validado = true) else it
-                            }
-                        }
                         mostrarPopupSucesso = true
                         abaSelecionada = "inicio"
                         eventoSendoValidado = null
@@ -169,16 +123,11 @@ fun AfyaEventosApp() {
                 )
             }
             else -> {
-                TelaPrincipal(
-                    nomeUsuario = dados.nome,
-                    tipoUsuario = dados.tipo,
-                    eventosInscritos = eventosInscritos,
+                RotaPrincipal(
+                    usuario = dados,
                     aoSair = { usuarioLogado = null },
                     aoTrocarAba = { abaSelecionada = it },
-                    aoCancelarInscricao = { evento ->
-                        eventosInscritos = eventosInscritos - evento
-                        eventosDisponiveis = eventosDisponiveis + evento
-                    },
+                    aoCancelarInscricao = { },
                     aoIniciarValidacao = { evento ->
                         eventoSendoValidado = evento
                         abaSelecionada = "leitor_qr"
@@ -223,7 +172,10 @@ fun AfyaEventosApp() {
         AlertDialog(
             onDismissRequest = { mostrarPopupErro = false },
             confirmButton = {
-                Button(onClick = { mostrarPopupErro = false }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
+                Button(
+                    onClick = { mostrarPopupErro = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
                     Text("Tentar novamente", color = Color.White)
                 }
             },

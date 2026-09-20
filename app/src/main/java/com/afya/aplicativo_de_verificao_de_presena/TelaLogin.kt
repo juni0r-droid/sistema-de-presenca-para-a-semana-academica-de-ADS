@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 
 @Composable
 fun RotaLogin(aoLogar: (DadosUsuario) -> Unit, aoIrParaCadastro: () -> Unit) {
@@ -28,6 +31,7 @@ fun RotaLogin(aoLogar: (DadosUsuario) -> Unit, aoIrParaCadastro: () -> Unit) {
     var senha by rememberSaveable { mutableStateOf("") }
     var senhaVisivel by rememberSaveable { mutableStateOf(false) }
     var mensagem by rememberSaveable { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
 
     TelaLogin(
         email = email,
@@ -42,20 +46,29 @@ fun RotaLogin(aoLogar: (DadosUsuario) -> Unit, aoIrParaCadastro: () -> Unit) {
             if (email.isBlank() || senha.isBlank()) {
                 mensagem = "Preencha e-mail e senha para entrar."
             } else {
-                mensagem = ""
-                // Simulação de login
-                if (email == "coordenador@afya.edu.br" && senha == "123456") {
-                    aoLogar(DadosUsuario(nome = "Coordenador Afya", email = email, tipo = TipoUsuario.COORDENADOR, cpf = "123.456.789-00"))
-                } else {
-                    val nomeExtraido = email.substringBefore("@").replaceFirstChar { it.uppercase() }
-                    aoLogar(DadosUsuario(nome = nomeExtraido, email = email, tipo = TipoUsuario.ALUNO, registro = "20260001"))
+                scope.launch {
+                    try {
+                        // Remove espaços acidentais no início ou fim do texto digitado no celular
+                        val emailLimpo = email.trim()
+                        val senhaLimpa = senha.trim()
+
+                        // Chamada real ao backend FastAPI via Retrofit/Ngrok
+                        val usuarioLogado = RetrofitClient.instance.login(
+                            LoginRequest(emailLimpo, senhaLimpa)
+                        )
+                        mensagem = ""
+                        aoLogar(usuarioLogado)
+                    } catch (e: Exception) {
+                        // Exibe a mensagem de erro exata no ecrã para diagnóstico
+                        android.util.Log.e("API_ERRO", "Erro no login", e)
+                        mensagem = "Erro: ${e.localizedMessage ?: e.message}"
+                    }
                 }
             }
         },
         aoIrParaCadastro = aoIrParaCadastro
     )
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TelaLogin(

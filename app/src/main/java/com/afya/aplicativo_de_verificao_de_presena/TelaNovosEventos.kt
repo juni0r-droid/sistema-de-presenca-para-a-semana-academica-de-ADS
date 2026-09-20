@@ -19,11 +19,75 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
+import kotlinx.coroutines.launch
+
+@Composable
+fun RotaNovosEventos(
+    usuario: DadosUsuario,
+    aoInscrever: (Evento) -> Unit,
+    aoTrocarAba: (String) -> Unit,
+    aoEditarEvento: (Evento) -> Unit = {},
+    aoExcluirEvento: (Evento) -> Unit = {}
+) {
+    var eventosDisponiveis by remember { mutableStateOf<List<Evento>>(emptyList()) }
+    var carregando by remember { mutableStateOf(true) }
+    var erroMsg by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+            try {
+                eventosDisponiveis = RetrofitClient.instance.listarEventos()
+                erroMsg = ""
+            } catch (e: Exception) {
+                android.util.Log.e("API_ERRO", "Erro ao carregar eventos", e)
+                erroMsg = "Erro ao carregar eventos da API."
+            } finally {
+                carregando = false
+            }
+        }
+    }
+
+    if (carregando) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = AfyaMagenta)
+        }
+    } else {
+        TelaNovosEventos(
+            tipoUsuario = usuario.tipo,
+            eventosDisponiveis = eventosDisponiveis,
+            erroMsg = erroMsg,
+            aoInscrever = { evento ->
+                // Chamada real à API para salvar a inscrição do aluno
+                scope.launch {
+                    try {
+                        RetrofitClient.instance.inscreverEvento(
+                            eventoId = evento.id,
+                            emailAluno = usuario.email
+                        )
+                        aoInscrever(evento)
+                    } catch (e: Exception) {
+                        android.util.Log.e("API_ERRO", "Erro ao inscrever", e)
+                    }
+                }
+            },
+            aoTrocarAba = aoTrocarAba,
+            aoEditarEvento = aoEditarEvento,
+            aoExcluirEvento = aoExcluirEvento
+        )
+    }
+}
 
 @Composable
 fun TelaNovosEventos(
     tipoUsuario: TipoUsuario = TipoUsuario.ALUNO,
     eventosDisponiveis: List<Evento>,
+    erroMsg: String = "",
     aoInscrever: (Evento) -> Unit,
     aoTrocarAba: (String) -> Unit,
     aoEditarEvento: (Evento) -> Unit = {},
@@ -43,18 +107,18 @@ fun TelaNovosEventos(
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 Text(
-                    "Início", 
-                    color = Color(0xFF5A5A5A), 
+                    "Início",
+                    color = Color(0xFF5A5A5A),
                     modifier = Modifier.clickable { aoTrocarAba("inicio") }
                 )
                 Text(
-                    "Eventos", 
-                    color = AfyaMagenta, 
+                    "Eventos",
+                    color = AfyaMagenta,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { aoTrocarAba("eventos") }
                 )
                 Text(
-                    "Perfil", 
+                    "Perfil",
                     color = Color(0xFF5A5A5A),
                     modifier = Modifier.clickable { aoTrocarAba("perfil") }
                 )
@@ -107,6 +171,15 @@ fun TelaNovosEventos(
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
+                if (erroMsg.isNotEmpty()) {
+                    Text(
+                        erroMsg,
+                        color = Color.Red,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                }
+
                 if (mensagemSucesso.isNotEmpty()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
@@ -123,8 +196,8 @@ fun TelaNovosEventos(
                 }
 
                 Text(
-                    if (tipoUsuario == TipoUsuario.COORDENADOR) "Todos os eventos" else "Disponíveis para inscrição", 
-                    fontSize = 18.sp, 
+                    if (tipoUsuario == TipoUsuario.COORDENADOR) "Todos os eventos" else "Disponíveis para inscrição",
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(15.dp))
@@ -171,7 +244,7 @@ fun TelaNovosEventos(
                         ) {
                             Text("Editar Evento")
                         }
-                        
+
                         OutlinedButton(
                             onClick = {
                                 aoExcluirEvento(evento)
@@ -191,12 +264,12 @@ fun TelaNovosEventos(
                                 eventoSelecionadoParaDetalhes = null
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
+                            colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta, contentColor = Color.White)
                         ) {
                             Text("Inscrever-se")
                         }
                     }
-                    
+
                     TextButton(
                         onClick = { eventoSelecionadoParaDetalhes = null },
                         modifier = Modifier.fillMaxWidth()

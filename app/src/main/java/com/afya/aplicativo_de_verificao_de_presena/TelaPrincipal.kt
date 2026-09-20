@@ -19,12 +19,91 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
+import kotlinx.coroutines.launch
+
+@Composable
+fun RotaPrincipal(
+    usuario: DadosUsuario,
+    aoSair: () -> Unit,
+    aoTrocarAba: (String) -> Unit,
+    aoCancelarInscricao: (Evento) -> Unit,
+    aoIniciarValidacao: (Evento) -> Unit,
+    aoCriarEvento: () -> Unit = {},
+    aoEditarEvento: (Evento) -> Unit = {},
+    aoExcluirEvento: (Evento) -> Unit = {}
+) {
+    var meusEventos by remember { mutableStateOf<List<Evento>>(emptyList()) }
+    var carregando by remember { mutableStateOf(true) }
+    var erroMsg by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    // Função para buscar a lista atualizada do backend
+    val carregarListaEventos = {
+        scope.launch {
+            try {
+                meusEventos = if (usuario.tipo == TipoUsuario.COORDENADOR) {
+                    RetrofitClient.instance.listarEventos()
+                } else {
+                    RetrofitClient.instance.listarMeusEventos(usuario.email)
+                }
+                erroMsg = ""
+            } catch (e: Exception) {
+                android.util.Log.e("API_ERRO", "Erro ao carregar eventos", e)
+                erroMsg = "Erro ao carregar eventos do servidor."
+            } finally {
+                carregando = false
+            }
+        }
+    }
+
+    LaunchedEffect(usuario) {
+        carregarListaEventos()
+    }
+
+    if (carregando) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = AfyaMagenta)
+        }
+    } else {
+        TelaPrincipal(
+            nomeUsuario = usuario.nome,
+            tipoUsuario = usuario.tipo,
+            eventosInscritos = meusEventos,
+            erroMsg = erroMsg,
+            aoSair = aoSair,
+            aoTrocarAba = aoTrocarAba,
+            aoCancelarInscricao = aoCancelarInscricao,
+            aoIniciarValidacao = aoIniciarValidacao,
+            aoCriarEvento = aoCriarEvento,
+            aoEditarEvento = aoEditarEvento,
+            aoExcluirEvento = { eventoParaExcluir ->
+                // Chamada de exclusão direta na API FastAPI via Retrofit
+                scope.launch {
+                    try {
+                        RetrofitClient.instance.excluirEvento(eventoParaExcluir.id)
+                        meusEventos = meusEventos.filter { it.id != eventoParaExcluir.id }
+                    } catch (e: Exception) {
+                        android.util.Log.e("API_ERRO", "Erro ao excluir evento", e)
+                        erroMsg = "Não foi possível excluir o evento no servidor."
+                    }
+                }
+                aoExcluirEvento(eventoParaExcluir)
+            }
+        )
+    }
+}
 
 @Composable
 fun TelaPrincipal(
     nomeUsuario: String,
     tipoUsuario: TipoUsuario,
     eventosInscritos: List<Evento>,
+    erroMsg: String = "",
     aoSair: () -> Unit,
     aoTrocarAba: (String) -> Unit,
     aoCancelarInscricao: (Evento) -> Unit,
@@ -39,9 +118,12 @@ fun TelaPrincipal(
     } else {
         "Olá, $primeiroNome"
     }
-    
+
     var aviso by remember { mutableStateOf("Selecione um evento para iniciar a validação.") }
     var eventoSelecionadoParaDetalhes by remember { mutableStateOf<Evento?>(null) }
+
+    // Estado para controle do Comprovante de Presença
+    var eventoParaComprovante by remember { mutableStateOf<Evento?>(null) }
 
     Scaffold(containerColor = Color.White) { paddingValues ->
         Column(
@@ -84,12 +166,21 @@ fun TelaPrincipal(
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
+                if (erroMsg.isNotEmpty()) {
+                    Text(
+                        erroMsg,
+                        color = Color.Red,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                }
+
                 Text(
                     if (tipoUsuario == TipoUsuario.COORDENADOR) "Eventos Recentes" else "Seus Eventos",
                     fontSize = 19.sp,
                     fontWeight = FontWeight.SemiBold
                 )
-                
+
                 if (tipoUsuario == TipoUsuario.COORDENADOR) {
                     Button(
                         onClick = aoCriarEvento,
@@ -100,7 +191,7 @@ fun TelaPrincipal(
                         Text("Criar Novo Evento", fontWeight = FontWeight.Bold)
                     }
                 }
-                
+
                 Spacer(Modifier.height(15.dp))
 
                 if (eventosInscritos.isEmpty()) {
@@ -141,18 +232,18 @@ fun TelaPrincipal(
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 Text(
-                    "Início", 
-                    color = AfyaMagenta, 
+                    "Início",
+                    color = AfyaMagenta,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { aoTrocarAba("inicio") }
                 )
                 Text(
-                    "Eventos", 
+                    "Eventos",
                     color = Color(0xFF5A5A5A),
                     modifier = Modifier.clickable { aoTrocarAba("eventos") }
                 )
                 Text(
-                    "Perfil", 
+                    "Perfil",
                     color = Color(0xFF5A5A5A),
                     modifier = Modifier.clickable { aoTrocarAba("perfil") }
                 )
@@ -160,10 +251,11 @@ fun TelaPrincipal(
         }
     }
 
-    // Modal de Detalhes com Opções de Cancelar e Validar
+    // Modal de Detalhes com Opções de Cancelar, Editar, Excluir e Ver Comprovante
     if (eventoSelecionadoParaDetalhes != null) {
         val evento = eventoSelecionadoParaDetalhes!!
-        val eHoraDoEvento = evento.data == "Hoje"
+        // Liberado para testes nos eventos do aplicativo
+        val eHoraDoEvento = true
 
         AlertDialog(
             onDismissRequest = { eventoSelecionadoParaDetalhes = null },
@@ -180,7 +272,7 @@ fun TelaPrincipal(
                         ) {
                             Text("Editar Evento")
                         }
-                        
+
                         OutlinedButton(
                             onClick = {
                                 aoExcluirEvento(evento)
@@ -201,20 +293,23 @@ fun TelaPrincipal(
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = eHoraDoEvento,
-                                colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
+                                colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta, contentColor = Color.White)
                             ) {
                                 Text("Validar presença")
                             }
                         } else {
                             Button(
-                                onClick = { /* Ação para ver comprovante */ },
+                                onClick = {
+                                    eventoParaComprovante = evento
+                                    eventoSelecionadoParaDetalhes = null
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                             ) {
                                 Text("Ver comprovante")
                             }
                         }
-                        
+
                         if (!evento.validado) {
                             OutlinedButton(
                                 onClick = {
@@ -244,7 +339,7 @@ fun TelaPrincipal(
                 Column {
                     Text("Local: ${evento.local}", fontWeight = FontWeight.Medium)
                     Text("Data: ${evento.data}", fontWeight = FontWeight.Medium)
-                    if (!eHoraDoEvento) {
+                    if (!eHoraDoEvento && tipoUsuario != TipoUsuario.COORDENADOR) {
                         Text(
                             "A validação ficará disponível apenas no dia do evento.",
                             color = AfyaMagenta,
@@ -254,6 +349,56 @@ fun TelaPrincipal(
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(evento.descricao)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Modal/Dialog do Comprovante de Presença
+    if (eventoParaComprovante != null) {
+        val ev = eventoParaComprovante!!
+        AlertDialog(
+            onDismissRequest = { eventoParaComprovante = null },
+            confirmButton = {
+                Button(
+                    onClick = { eventoParaComprovante = null },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                ) {
+                    Text("Concluído")
+                }
+            },
+            title = {
+                Text(
+                    "Comprovante de Presença",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF2E7D32)
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("Participante: $nomeUsuario", fontWeight = FontWeight.SemiBold)
+                    Text("Evento: ${ev.titulo}")
+                    Text("Local: ${ev.local}")
+                    Text("Data: ${ev.data}")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Status: PRESENÇA CONFIRMADA",
+                        color = Color(0xFF2E7D32),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        "Código do Comprovante: AFYA-${ev.chaveAcesso}",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
                 }
             },
             containerColor = Color.White,

@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 @Composable
 fun RotaCadastro(aoCadastrar: (DadosUsuario) -> Unit, aoVoltar: () -> Unit) {
@@ -35,6 +37,7 @@ fun RotaCadastro(aoCadastrar: (DadosUsuario) -> Unit, aoVoltar: () -> Unit) {
     var senha by rememberSaveable { mutableStateOf("") }
     var senhaVisivel by rememberSaveable { mutableStateOf(false) }
     var mensagem by rememberSaveable { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
 
     TelaCadastro(
         tipoSelecionado = tipoSelecionado,
@@ -58,8 +61,8 @@ fun RotaCadastro(aoCadastrar: (DadosUsuario) -> Unit, aoVoltar: () -> Unit) {
             val camposValidos = if (tipoSelecionado == TipoUsuario.ALUNO) {
                 nome.isNotBlank() && email.isNotBlank() && registro.isNotBlank() && senha.isNotBlank()
             } else {
-                nome.isNotBlank() && email.isNotBlank() && cpf.isNotBlank() && 
-                senhaInstitucional == "ADM_Afya" && senha.isNotBlank()
+                nome.isNotBlank() && email.isNotBlank() && cpf.isNotBlank() &&
+                        senhaInstitucional == "ADM_Afya" && senha.isNotBlank()
             }
 
             if (!camposValidos) {
@@ -69,16 +72,26 @@ fun RotaCadastro(aoCadastrar: (DadosUsuario) -> Unit, aoVoltar: () -> Unit) {
                     "Preencha todos os campos para cadastrar."
                 }
             } else {
-                mensagem = ""
-                aoCadastrar(
-                    DadosUsuario(
-                        nome = nome,
-                        email = email,
-                        tipo = tipoSelecionado,
-                        registro = if (tipoSelecionado == TipoUsuario.ALUNO) registro else null,
-                        cpf = if (tipoSelecionado == TipoUsuario.COORDENADOR) cpf else null
-                    )
-                )
+                scope.launch {
+                    try {
+                        val req = CadastroRequest(
+                            nome = nome.trim(),
+                            email = email.trim(),
+                            senha = senha.trim(),
+                            tipo = tipoSelecionado,
+                            registro = if (tipoSelecionado == TipoUsuario.ALUNO) registro.trim() else null,
+                            cpf = if (tipoSelecionado == TipoUsuario.COORDENADOR) cpf.trim() else null,
+                            senhaInstitucional = if (tipoSelecionado == TipoUsuario.COORDENADOR) senhaInstitucional.trim() else null
+                        )
+                        // Chamada real ao backend FastAPI
+                        val usuarioCriado = RetrofitClient.instance.cadastrar(req)
+                        mensagem = ""
+                        aoCadastrar(usuarioCriado)
+                    } catch (e: Exception) {
+                        android.util.Log.e("API_ERRO", "Erro no cadastro", e)
+                        mensagem = "Erro ao cadastrar: ${e.localizedMessage ?: e.message}"
+                    }
+                }
             }
         },
         aoVoltar = aoVoltar
@@ -141,7 +154,7 @@ fun TelaCadastro(
                 ) {
                     val corAluno = if (tipoSelecionado == TipoUsuario.ALUNO) AfyaMagenta else Color(0xFFD7D7D7)
                     val corTextoAluno = if (tipoSelecionado == TipoUsuario.ALUNO) Color.White else Color.Black
-                    
+
                     val corCoordenador = if (tipoSelecionado == TipoUsuario.COORDENADOR) AfyaMagenta else Color(0xFFD7D7D7)
                     val corTextoCoordenador = if (tipoSelecionado == TipoUsuario.COORDENADOR) Color.White else Color.Black
 
@@ -166,14 +179,14 @@ fun TelaCadastro(
                 Text("Nome completo", fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(4.dp))
                 AfyaTextField(nome, aoMudarNome, "nome completo", KeyboardType.Text)
-                
+
                 Spacer(Modifier.height(8.dp))
                 Text("E-mail", fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(4.dp))
                 AfyaTextField(email, aoMudarEmail, "e-mail acadêmico", KeyboardType.Email)
-                
+
                 Spacer(Modifier.height(8.dp))
-                
+
                 if (tipoSelecionado == TipoUsuario.ALUNO) {
                     Text("Registro do aluno (RA)", fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(4.dp))
@@ -182,7 +195,7 @@ fun TelaCadastro(
                     Text("CPF", fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(4.dp))
                     AfyaTextField(cpf, aoMudarCpf, "número do CPF", KeyboardType.Number)
-                    
+
                     Spacer(Modifier.height(8.dp))
                     Text("Senha Institucional", fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(4.dp))
@@ -198,7 +211,7 @@ fun TelaCadastro(
                         colors = afyaCoresCampo()
                     )
                 }
-                
+
                 Spacer(Modifier.height(8.dp))
                 Text("Senha", fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(4.dp))
@@ -224,7 +237,7 @@ fun TelaCadastro(
                         )
                     }
                 )
-                
+
                 Spacer(Modifier.height(20.dp))
                 Button(
                     onClick = aoCadastrar,
@@ -239,7 +252,7 @@ fun TelaCadastro(
                 ) {
                     Text("Cadastrar", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
-                
+
                 if (mensagem.isNotEmpty()) {
                     Text(
                         mensagem,
@@ -250,7 +263,7 @@ fun TelaCadastro(
                             .padding(top = 12.dp)
                     )
                 }
-                
+
                 Spacer(Modifier.height(20.dp))
                 Row(
                     Modifier.fillMaxWidth(),

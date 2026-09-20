@@ -17,12 +17,49 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
+import kotlinx.coroutines.launch
 import java.util.UUID
+
+@Composable
+fun RotaCriarEvento(
+    eventoParaEditar: Evento? = null,
+    aoCriar: (Evento) -> Unit,
+    aoVoltar: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var mensagemErro by rememberSaveable { mutableStateOf("") }
+    var carregando by remember { mutableStateOf(false) }
+
+    TelaCriarEvento(
+        eventoParaEditar = eventoParaEditar,
+        mensagemErroExterna = mensagemErro,
+        carregando = carregando,
+        aoConfirmarSalvar = { novoEvento ->
+            scope.launch {
+                carregando = true
+                try {
+                    // Envia o novo evento para a API Python em FastAPI via Retrofit
+                    RetrofitClient.instance.criarEvento(novoEvento)
+                    mensagemErro = ""
+                    aoCriar(novoEvento)
+                } catch (e: Exception) {
+                    android.util.Log.e("API_ERRO", "Erro ao criar evento", e)
+                    mensagemErro = "Erro ao guardar no servidor: ${e.localizedMessage ?: e.message}"
+                } finally {
+                    carregando = false
+                }
+            }
+        },
+        aoVoltar = aoVoltar
+    )
+}
 
 @Composable
 fun TelaCriarEvento(
     eventoParaEditar: Evento? = null,
-    aoCriar: (Evento) -> Unit,
+    mensagemErroExterna: String = "",
+    carregando: Boolean = false,
+    aoConfirmarSalvar: (Evento) -> Unit = {},
     aoVoltar: () -> Unit
 ) {
     var titulo by rememberSaveable { mutableStateOf(eventoParaEditar?.titulo ?: "") }
@@ -32,7 +69,7 @@ fun TelaCriarEvento(
     var local by rememberSaveable { mutableStateOf(eventoParaEditar?.local ?: "") }
     var limiteVagas by rememberSaveable { mutableStateOf(eventoParaEditar?.limiteVagas?.toString() ?: "") }
     var duracao by rememberSaveable { mutableStateOf(eventoParaEditar?.duracao ?: "") }
-    var mensagemErro by rememberSaveable { mutableStateOf("") }
+    var mensagemErroInterna by rememberSaveable { mutableStateOf("") }
 
     var eventoCriadoSucesso by remember { mutableStateOf<Evento?>(null) }
 
@@ -67,7 +104,7 @@ fun TelaCriarEvento(
 
             AfyaTextField(titulo, { titulo = it }, "Título do evento", KeyboardType.Text)
             AfyaTextField(descricao, { descricao = it }, "Descrição curta", KeyboardType.Text)
-            
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.weight(1f)) {
                     AfyaTextField(data, { data = it }, "Data (DD/MM)", KeyboardType.Text)
@@ -78,7 +115,7 @@ fun TelaCriarEvento(
             }
 
             AfyaTextField(local, { local = it }, "Local / Sala", KeyboardType.Text)
-            
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.weight(1f)) {
                     AfyaTextField(limiteVagas, { limiteVagas = it }, "Vagas", KeyboardType.Number)
@@ -88,8 +125,9 @@ fun TelaCriarEvento(
                 }
             }
 
-            if (mensagemErro.isNotEmpty()) {
-                Text(mensagemErro, color = Color.Red, fontSize = 13.sp)
+            val msgParaExibir = mensagemErroExterna.ifEmpty { mensagemErroInterna }
+            if (msgParaExibir.isNotEmpty()) {
+                Text(msgParaExibir, color = Color.Red, fontSize = 13.sp)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -97,18 +135,19 @@ fun TelaCriarEvento(
             Button(
                 onClick = {
                     if (titulo.isBlank() || data.isBlank() || hora.isBlank() || local.isBlank()) {
-                        mensagemErro = "Por favor, preencha os campos obrigatórios."
+                        mensagemErroInterna = "Por favor, preencha os campos obrigatórios."
                     } else {
+                        mensagemErroInterna = ""
                         val novaChave = eventoParaEditar?.chaveAcesso ?: UUID.randomUUID().toString().substring(0, 8).uppercase()
                         val novoEvento = Evento(
                             id = eventoParaEditar?.id ?: UUID.randomUUID().toString(),
-                            titulo = titulo,
-                            descricao = descricao,
-                            data = data,
-                            hora = hora,
-                            local = local,
+                            titulo = titulo.trim(),
+                            descricao = descricao.trim(),
+                            data = data.trim(),
+                            hora = hora.trim(),
+                            local = local.trim(),
                             limiteVagas = limiteVagas.toIntOrNull() ?: 0,
-                            duracao = duracao,
+                            duracao = duracao.trim(),
                             chaveAcesso = novaChave,
                             validado = eventoParaEditar?.validado ?: false
                         )
@@ -116,17 +155,22 @@ fun TelaCriarEvento(
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
+                enabled = !carregando,
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
             ) {
-                Text(
-                    if (eventoParaEditar != null) "Salvar Alterações" else "Gerar Evento e QR Code", 
-                    fontSize = 18.sp, 
-                    fontWeight = FontWeight.Bold
-                )
+                if (carregando) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text(
+                        if (eventoParaEditar != null) "Salvar Alterações" else "Gerar Evento e QR Code",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
-            TextButton(onClick = aoVoltar, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = aoVoltar, modifier = Modifier.fillMaxWidth(), enabled = !carregando) {
                 Text("Cancelar", color = Color.Gray)
             }
         }
@@ -139,7 +183,7 @@ fun TelaCriarEvento(
             confirmButton = {
                 Button(
                     onClick = {
-                        aoCriar(evento)
+                        aoConfirmarSalvar(evento)
                         eventoCriadoSucesso = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta)
@@ -152,9 +196,9 @@ fun TelaCriarEvento(
                 Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                     Text("Chave de acesso gerada:", fontWeight = FontWeight.Bold)
                     Text(
-                        evento.chaveAcesso, 
-                        fontSize = 32.sp, 
-                        fontWeight = FontWeight.ExtraBold, 
+                        evento.chaveAcesso,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.ExtraBold,
                         color = AfyaMagenta,
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
@@ -175,6 +219,6 @@ fun TelaCriarEvento(
 @Composable
 fun PreviewTelaCriarEvento() {
     AplicativodeVerificação_de_PresençaTheme {
-        TelaCriarEvento(aoCriar = {}, aoVoltar = {})
+        TelaCriarEvento(aoVoltar = {})
     }
 }
