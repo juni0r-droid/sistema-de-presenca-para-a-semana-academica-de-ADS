@@ -61,8 +61,6 @@ fun AfyaEventosApp() {
         when (abaSelecionada) {
             "inicio" -> {
                 val listaParaExibir = if (dados.tipo == TipoUsuario.COORDENADOR) {
-                    // Pega todos os eventos (disponíveis e inscritos para garantir consistência)
-                    // e exibe os 5 mais recentes baseados na ordem de criação (assumindo listaDisponiveis como fonte)
                     eventosDisponiveis.takeLast(5).reversed()
                 } else {
                     eventosInscritos
