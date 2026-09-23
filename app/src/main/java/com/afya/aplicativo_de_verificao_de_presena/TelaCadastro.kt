@@ -87,6 +87,7 @@ fun RotaCadastro(aoCadastrar: (DadosUsuario) -> Unit, aoVoltar: () -> Unit) {
                         val usuarioCriado = RetrofitClient.instance.cadastrar(req)
 
                         // Se o cadastro der certo, 'usuarioCriado' já retorna os dados completos (incluindo o registro/RA)
+                        //
                         mensagem = "Cadastro realizado com sucesso!"
                         aoCadastrar(usuarioCriado)
 
