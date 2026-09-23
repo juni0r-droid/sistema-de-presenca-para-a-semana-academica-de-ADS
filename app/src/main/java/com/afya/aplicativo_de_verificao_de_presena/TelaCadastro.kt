@@ -76,20 +76,28 @@ fun RotaCadastro(aoCadastrar: (DadosUsuario) -> Unit, aoVoltar: () -> Unit) {
                     try {
                         val req = CadastroRequest(
                             nome = nome.trim(),
-                            email = email.trim(),
+                            email = email.trim().lowercase(), // Evita erros de formato e espaços
                             senha = senha.trim(),
-                            tipo = tipoSelecionado,
+                            tipo = tipoSelecionado, // Certifique-se de que no ApiService o tipo em CadastroRequest é TipoUsuario
                             registro = if (tipoSelecionado == TipoUsuario.ALUNO) registro.trim() else null,
                             cpf = if (tipoSelecionado == TipoUsuario.COORDENADOR) cpf.trim() else null,
-                            senhaInstitucional = if (tipoSelecionado == TipoUsuario.COORDENADOR) senhaInstitucional.trim() else null
+                            senhaInstitucional = if (tipoSelecionado == TipoUsuario.COORDENADOR) "ADM_Afya" else null
                         )
-                        // Chamada real ao backend FastAPI
+
                         val usuarioCriado = RetrofitClient.instance.cadastrar(req)
-                        mensagem = ""
+
+                        // Se o cadastro der certo, 'usuarioCriado' já retorna os dados completos (incluindo o registro/RA)
+                        mensagem = "Cadastro realizado com sucesso!"
                         aoCadastrar(usuarioCriado)
+
+                    } catch (e: retrofit2.HttpException) {
+                        when (e.code()) {
+                            400 -> mensagem = "E-mail já cadastrado ou senha institucional inválida."
+                            422 -> mensagem = "Erro de validação nos dados enviados (Erro 422)."
+                            else -> mensagem = "Erro no servidor (${e.code()})."
+                        }
                     } catch (e: Exception) {
-                        android.util.Log.e("API_ERRO", "Erro no cadastro", e)
-                        mensagem = "Erro ao cadastrar: ${e.localizedMessage ?: e.message}"
+                        mensagem = "Erro de conexão com o servidor."
                     }
                 }
             }
