@@ -184,26 +184,6 @@ fun TelaLogin(
                         modifier = Modifier.clickable(onClick = aoIrParaCadastro)
                     )
                 }
-                Spacer(Modifier.height(20.dp))
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE4F0)),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Column(Modifier.padding(15.dp)) {
-                        Text(
-                            "Acesso de demonstração",
-                            color = AfyaMagenta,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                        Text(
-                            "coordenador@afya.edu.br\nSenha: 123456",
-                            color = Color(0xFF5E1235),
-                            fontSize = 13.sp,
-                            lineHeight = 19.sp
-                        )
-                    }
-                }
             }
         }
     }
