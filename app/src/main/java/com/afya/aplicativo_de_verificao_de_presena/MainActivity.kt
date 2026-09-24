@@ -161,9 +161,11 @@ fun AfyaEventosApp() {
                     Text("OK")
                 }
             },
-            title = { Text("Sucesso") },
-            text = { Text("Validação concluída com sucesso!") },
+            title = { Text("Sucesso", color = Color.Black) },
+            text = { Text("Validação concluída com sucesso!", color = Color.DarkGray) },
             containerColor = Color.White,
+            titleContentColor = Color.Black,
+            textContentColor = Color.DarkGray,
             shape = RoundedCornerShape(16.dp)
         )
     }
@@ -179,9 +181,11 @@ fun AfyaEventosApp() {
                     Text("Tentar novamente", color = Color.White)
                 }
             },
-            title = { Text("Erro na Validação") },
-            text = { Text("Não foi possível validar sua presença, tente novamente.") },
+            title = { Text("Erro na Validação", color = Color.Black) },
+            text = { Text("Não foi possível validar sua presença, tente novamente.", color = Color.DarkGray) },
             containerColor = Color.White,
+            titleContentColor = Color.Black,
+            textContentColor = Color.DarkGray,
             shape = RoundedCornerShape(16.dp)
         )
     }

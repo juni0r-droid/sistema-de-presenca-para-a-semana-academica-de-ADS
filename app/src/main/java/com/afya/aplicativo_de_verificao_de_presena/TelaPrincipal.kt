@@ -338,11 +338,11 @@ fun TelaPrincipal(
                 }
             },
             dismissButton = null,
-            title = { Text(evento.titulo, fontWeight = FontWeight.Bold) },
+            title = { Text(evento.titulo, fontWeight = FontWeight.Bold, color = Color.Black) },
             text = {
                 Column {
-                    Text("Local: ${evento.local}", fontWeight = FontWeight.Medium)
-                    Text("Data: ${evento.data}", fontWeight = FontWeight.Medium)
+                    Text("Local: ${evento.local}", fontWeight = FontWeight.Medium, color = Color.DarkGray)
+                    Text("Data: ${evento.data}", fontWeight = FontWeight.Medium, color = Color.DarkGray)
                     if (!eHoraDoEvento && tipoUsuario != TipoUsuario.COORDENADOR) {
                         Text(
                             "A validação ficará disponível apenas no dia do evento.",
@@ -352,10 +352,12 @@ fun TelaPrincipal(
                         )
                     }
                     Spacer(Modifier.height(12.dp))
-                    Text(evento.descricao)
+                    Text(evento.descricao, color = Color.DarkGray)
                 }
             },
             containerColor = Color.White,
+            titleContentColor = Color.Black,
+            textContentColor = Color.DarkGray,
             shape = RoundedCornerShape(16.dp)
         )
     }
@@ -387,10 +389,10 @@ fun TelaPrincipal(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("Participante: $nomeUsuario", fontWeight = FontWeight.SemiBold)
-                    Text("Evento: ${ev.titulo}")
-                    Text("Local: ${ev.local}")
-                    Text("Data: ${ev.data}")
+                    Text("Participante: $nomeUsuario", fontWeight = FontWeight.SemiBold, color = Color.Black)
+                    Text("Evento: ${ev.titulo}", color = Color.DarkGray)
+                    Text("Local: ${ev.local}", color = Color.DarkGray)
+                    Text("Data: ${ev.data}", color = Color.DarkGray)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "Status: PRESENÇA CONFIRMADA",
@@ -406,6 +408,8 @@ fun TelaPrincipal(
                 }
             },
             containerColor = Color.White,
+            titleContentColor = Color.Black,
+            textContentColor = Color.DarkGray,
             shape = RoundedCornerShape(16.dp)
         )
     }

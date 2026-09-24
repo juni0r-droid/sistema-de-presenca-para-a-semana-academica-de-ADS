@@ -279,16 +279,18 @@ fun TelaNovosEventos(
                 }
             },
             dismissButton = null,
-            title = { Text(evento.titulo, fontWeight = FontWeight.Bold) },
+            title = { Text(evento.titulo, fontWeight = FontWeight.Bold, color = Color.Black) },
             text = {
                 Column {
-                    Text("Local: ${evento.local}", fontWeight = FontWeight.Medium)
-                    Text("Data: ${evento.data}", fontWeight = FontWeight.Medium)
+                    Text("Local: ${evento.local}", fontWeight = FontWeight.Medium, color = Color.DarkGray)
+                    Text("Data: ${evento.data}", fontWeight = FontWeight.Medium, color = Color.DarkGray)
                     Spacer(Modifier.height(12.dp))
-                    Text(evento.descricao)
+                    Text(evento.descricao, color = Color.DarkGray)
                 }
             },
             containerColor = Color.White,
+            titleContentColor = Color.Black,
+            textContentColor = Color.DarkGray,
             shape = RoundedCornerShape(16.dp)
         )
     }

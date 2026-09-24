@@ -195,10 +195,10 @@ fun TelaCriarEvento(
                     Text("OK, Salvar")
                 }
             },
-            title = { Text("Evento Criado!") },
+            title = { Text("Evento Criado!", color = Color.Black) },
             text = {
                 Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                    Text("Chave de acesso gerada:", fontWeight = FontWeight.Bold)
+                    Text("Chave de acesso gerada:", fontWeight = FontWeight.Bold, color = Color.DarkGray)
                     Text(
                         evento.chaveAcesso,
                         fontSize = 32.sp,
@@ -209,11 +209,14 @@ fun TelaCriarEvento(
                     Text(
                         "Esta chave será convertida no QR Code para os alunos validarem a presença às ${evento.hora}.",
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        color = Color.DarkGray
                     )
                 }
             },
             containerColor = Color.White,
+            titleContentColor = Color.Black,
+            textContentColor = Color.DarkGray,
             shape = RoundedCornerShape(16.dp)
         )
     }
