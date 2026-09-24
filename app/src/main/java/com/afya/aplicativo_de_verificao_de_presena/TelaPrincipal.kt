@@ -209,7 +209,11 @@ fun TelaPrincipal(
                             detalhe = "${evento.local} · ${evento.data}",
                             acao = if (evento.validado) "Ver comprovante" else if (tipoUsuario == TipoUsuario.COORDENADOR) "Gerenciar" else "Mais detalhes"
                         ) {
-                            eventoSelecionadoParaDetalhes = evento
+                            if (evento.validado) {
+                                eventoParaComprovante = evento
+                            } else {
+                                eventoSelecionadoParaDetalhes = evento
+                            }
                         }
                         Spacer(Modifier.height(12.dp))
                     }

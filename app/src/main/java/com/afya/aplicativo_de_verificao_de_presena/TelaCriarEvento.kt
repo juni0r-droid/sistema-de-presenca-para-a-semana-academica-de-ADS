@@ -38,12 +38,16 @@ fun RotaCriarEvento(
             scope.launch {
                 carregando = true
                 try {
-                    // Envia o novo evento para a API Python em FastAPI via Retrofit
+                    if (eventoParaEditar != null) {
+                        try {
+                            RetrofitClient.instance.excluirEvento(eventoParaEditar.id)
+                        } catch (_: Exception) {}
+                    }
                     RetrofitClient.instance.criarEvento(novoEvento)
                     mensagemErro = ""
                     aoCriar(novoEvento)
                 } catch (e: Exception) {
-                    android.util.Log.e("API_ERRO", "Erro ao criar evento", e)
+                    android.util.Log.e("API_ERRO", "Erro ao salvar evento", e)
                     mensagemErro = "Erro ao guardar no servidor: ${e.localizedMessage ?: e.message}"
                 } finally {
                     carregando = false
