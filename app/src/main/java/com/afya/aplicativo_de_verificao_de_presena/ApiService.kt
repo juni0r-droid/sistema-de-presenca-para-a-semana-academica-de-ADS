@@ -27,6 +27,12 @@ data class CadastroRequest(
     val senhaInstitucional: String? = null
 )
 
+data class AlterarSenhaRequest(
+    val email: String,
+    val senhaAntiga: String,
+    val novaSenha: String
+)
+
 data class ValidarQRRequest(
     val evento_id: String,
     val chaveAcesso: String
@@ -42,6 +48,9 @@ data class RespostaPadrao(
 interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): DadosUsuario
+
+    @POST("auth/alterar-senha")
+    suspend fun alterarSenha(@Body body: AlterarSenhaRequest): RespostaPadrao
 
     @POST("eventos/{evento_id}/inscrever")
     suspend fun inscreverEvento(

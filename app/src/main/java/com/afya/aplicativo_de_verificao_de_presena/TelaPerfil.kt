@@ -1,11 +1,13 @@
 package com.afya.aplicativo_de_verificao_de_presena
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -14,18 +16,22 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AfyaMagenta
 import com.afya.aplicativo_de_verificao_de_presena.ui.theme.AplicativodeVerificação_de_PresençaTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun TelaPerfil(
@@ -33,6 +39,15 @@ fun TelaPerfil(
     aoSair: () -> Unit,
     aoTrocarAba: (String) -> Unit,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Estados para controle do Modal de Alteração de Senha
+    var exibirDialogoSenha by remember { mutableStateOf(false) }
+    var senhaAtual by remember { mutableStateOf("") }
+    var novaSenha by remember { mutableStateOf("") }
+    var carregando by remember { mutableStateOf(false) }
+
     Scaffold(
         containerColor = Color.White,
         bottomBar = {
@@ -44,18 +59,18 @@ fun TelaPerfil(
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 Text(
-                    "Início", 
-                    color = Color(0xFF555555), 
+                    "Início",
+                    color = Color(0xFF555555),
                     modifier = Modifier.clickable { aoTrocarAba("inicio") }
                 )
                 Text(
-                    "Eventos", 
+                    "Eventos",
                     color = Color(0xFF555555),
                     modifier = Modifier.clickable { aoTrocarAba("eventos") }
                 )
                 Text(
-                    "Perfil", 
-                    color = AfyaMagenta, 
+                    "Perfil",
+                    color = AfyaMagenta,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { aoTrocarAba("perfil") }
                 )
@@ -151,7 +166,7 @@ fun TelaPerfil(
                 )
 
                 Button(
-                    onClick = { /* Lógica para mudar senha */ },
+                    onClick = { exibirDialogoSenha = true },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF3F3F3), contentColor = Color.Black),
                     shape = RoundedCornerShape(12.dp)
@@ -185,6 +200,113 @@ fun TelaPerfil(
                 }
             }
         }
+    }
+
+    // --- DIÁLOGO / MODAL PARA ALTERAÇÃO DE SENHA ---
+    if (exibirDialogoSenha) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!carregando) {
+                    exibirDialogoSenha = false
+                    senhaAtual = ""
+                    novaSenha = ""
+                }
+            },
+            title = {
+                Text(text = "Alterar Senha", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Digite sua senha atual e a nova senha desejada.")
+
+                    OutlinedTextField(
+                        value = senhaAtual,
+                        onValueChange = { senhaAtual = it },
+                        label = { Text("Senha Atual") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = novaSenha,
+                        onValueChange = { novaSenha = it },
+                        label = { Text("Nova Senha") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (senhaAtual.isBlank() || novaSenha.isBlank()) {
+                            Toast.makeText(context, "Preencha todos os campos", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        carregando = true
+                        scope.launch {
+                            try {
+                                val req = AlterarSenhaRequest(
+                                    email = dadosUsuario.email,
+                                    senhaAntiga = senhaAtual,
+                                    novaSenha = novaSenha
+                                )
+
+                                val resposta = RetrofitClient.instance.alterarSenha(req)
+
+                                if (resposta.sucesso == true || resposta.mensagem?.contains("sucesso", ignoreCase = true) == true) {
+                                    Toast.makeText(context, "Senha alterada com sucesso!", Toast.LENGTH_LONG).show()
+                                    exibirDialogoSenha = false
+                                    senhaAtual = ""
+                                    novaSenha = ""
+                                } else {
+                                    Toast.makeText(context, resposta.mensagem ?: "Erro ao alterar senha", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: retrofit2.HttpException) {
+                                if (e.code() == 400) {
+                                    Toast.makeText(context, "A senha atual está incorreta.", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Erro no servidor (${e.code()})", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Erro de conexão com o servidor.", Toast.LENGTH_SHORT).show()
+                            } finally {
+                                carregando = false
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AfyaMagenta),
+                    enabled = !carregando
+                ) {
+                    if (carregando) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Salvar")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        exibirDialogoSenha = false
+                        senhaAtual = ""
+                        novaSenha = ""
+                    },
+                    enabled = !carregando
+                ) {
+                    Text("Cancelar", color = Color.Gray)
+                }
+            }
+        )
     }
 }
 
