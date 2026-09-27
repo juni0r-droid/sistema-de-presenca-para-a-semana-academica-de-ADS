@@ -54,16 +54,28 @@ fun RotaLogin(aoLogar: (DadosUsuario) -> Unit, aoIrParaCadastro: () -> Unit) {
                         val emailLimpo = email.trim()
                         val senhaLimpa = senha.trim()
 
-                        // Chamada real ao backend FastAPI via Retrofit/Ngrok
+                        // Chamada real ao backend FastAPI via Retrofit no Render
                         val usuarioLogado = RetrofitClient.instance.login(
                             LoginRequest(emailLimpo, senhaLimpa)
                         )
                         mensagem = ""
                         aoLogar(usuarioLogado)
+                    } catch (e: retrofit2.HttpException) {
+                        // Captura o código de erro real enviado pelo Render (ex: 400, 401, 404, 500)
+                        val codigo = e.code()
+                        val corpoErro = e.response()?.errorBody()?.string()
+                        android.util.Log.e("API_ERRO", "Erro HTTP $codigo: $corpoErro")
+
+                        mensagem = when (codigo) {
+                            401, 400 -> "E-mail ou senha incorretos."
+                            404 -> "Usuário não encontrado."
+                            500 -> "Erro interno no servidor."
+                            else -> "Erro no servidor ($codigo)."
+                        }
                     } catch (e: Exception) {
-                        // Exibe a mensagem de erro exata no ecrã para diagnóstico
-                        android.util.Log.e("API_ERRO", "Erro no login", e)
-                        mensagem = "Erro: ${e.localizedMessage ?: e.message}"
+                        // Captura erros de rede (sem internet, timeout do Render ao acordar, URL errada)
+                        android.util.Log.e("API_ERRO", "Falha de conexão", e)
+                        mensagem = "Servidor offline ou sem conexão com a internet."
                     }
                 }
             }

@@ -9,6 +9,7 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 // --- MODELOS DE REQUISIÇÃO E RESPOSTA DA API ---
 
@@ -46,52 +47,49 @@ data class RespostaPadrao(
 // --- INTERFACE RETROFIT ---
 
 interface ApiService {
-    @POST("auth/login")
+    @POST("auth/login/")
     suspend fun login(@Body body: LoginRequest): DadosUsuario
 
-    @POST("auth/alterar-senha")
+    @POST("auth/alterar-senha/")
     suspend fun alterarSenha(@Body body: AlterarSenhaRequest): RespostaPadrao
 
-    @POST("eventos/{evento_id}/inscrever")
+    @POST("eventos/{evento_id}/inscrever/")
     suspend fun inscreverEvento(
         @Path("evento_id") eventoId: String,
         @Query("email_aluno") emailAluno: String
     ): RespostaPadrao
 
-    @POST("auth/cadastro")
+    @POST("auth/cadastro/")
     suspend fun cadastrar(@Body body: CadastroRequest): DadosUsuario
 
-    @GET("eventos")
+    @GET("eventos/")
     suspend fun listarEventos(): List<Evento>
 
-    @GET("eventos/meus-eventos")
+    @GET("eventos/meus-eventos/")
     suspend fun listarMeusEventos(@Query("email_aluno") emailAluno: String): List<Evento>
 
-    @POST("eventos")
+    @POST("eventos/")
     suspend fun criarEvento(@Body evento: Evento): Evento
 
-    @DELETE("eventos/{id}")
+    @DELETE("eventos/{id}/")
     suspend fun excluirEvento(@Path("id") id: String): RespostaPadrao
 
-    @POST("eventos/validar-qr")
+    @POST("eventos/validar-qr/")
     suspend fun validarQR(
         @Body body: ValidarQRRequest,
         @Query("email_aluno") emailAluno: String
     ): RespostaPadrao
 }
 
-// --- CLIENTE RETROFIT (CONFIGURAÇÃO DE IP) ---
+// --- CLIENTE RETROFIT ---
 object RetrofitClient {
-    // Sua URL do Ngrok:
     private const val BASE_URL = "https://backend-app-validacao.onrender.com/"
 
-    // Adiciona o cabeçalho exigido pelo Ngrok para responder JSON direto
+    // Cliente HTTP com suporte a timeouts para suportar o tempo do Render "acordar"
     private val okHttpClient = OkHttpClient.Builder()
-        .addInterceptor { chain ->
-            val requestBuilder = chain.request().newBuilder()
-            requestBuilder.addHeader("ngrok-skip-browser-warning", "true")
-            chain.proceed(requestBuilder.build())
-        }
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
     val instance: ApiService by lazy {
