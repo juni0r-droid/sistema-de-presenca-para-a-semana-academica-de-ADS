@@ -56,4 +56,12 @@ dependencies {
     // Retrofit e Gson para conexão HTTP e conversão de JSON
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    // CameraX
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+
+    // Google ML Kit Barcode Scanning
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 }
